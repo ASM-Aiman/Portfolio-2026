@@ -1,0 +1,82 @@
+@import url("https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;800&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,400&family=Space+Mono:ital,wght@0,400;0,700;1,400&display=swap");
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --void: #0a0c10;
+    --parchment: #e3d5c5;
+    --ink: #1a1c23;
+    --gold: #c5a059;
+    --gold-dim: #8a6d3b;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply antialiased;
+    font-family: "Cormorant Garamond", serif;
+    background: var(--void);
+    color: var(--parchment);
+    overflow-x: hidden;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    font-family: "Cinzel", serif;
+    @apply tracking-wide;
+  }
+
+  .font-mono {
+    font-family: "Space Mono", monospace;
+  }
+}
+
+@layer components {
+  .text-glow {
+    text-shadow:
+      0 0 40px rgba(197, 160, 89, 0.3),
+      0 2px 10px rgba(0, 0, 0, 0.5);
+  }
+
+  .glass-panel {
+    @apply bg-black/30 backdrop-blur-md border border-white/10;
+  }
+}
+
+/* Smooth scrolling for the atmosphere effect */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Selection styling */
+::selection {
+  background: var(--gold);
+  color: var(--void);
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--gold-dim);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--gold);
+}
+
+/* Ensure the orb container is above everything */
+.fixed.left-4 {
+  isolation: isolate;
+}
