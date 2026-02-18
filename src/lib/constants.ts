@@ -169,14 +169,14 @@ export const stories: StoriesCollection = {
   ],
   films: [
     { 
-      title: "Blade Runner 2049", 
-      director: "Denis Villeneuve", 
-      quote: "You look lonely. I can fix that." 
+      title: "Gladiator", 
+      director: "Ridley Scott", 
+      quote: "what we do in life echoes in eternity" 
     },
     { 
       title: "Dead Poets Society", 
       director: "Peter Weir", 
-      quote: "We don't read and write poetry because it's cute. We read and write poetry because we are members of the" 
+      quote: "We don't read and write poetry because it's cute. We read and write poetry because we are members of the human race" 
     },
     { 
       title: "Midnight in Paris", 
