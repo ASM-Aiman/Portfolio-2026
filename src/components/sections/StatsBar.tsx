@@ -6,8 +6,8 @@ export const StatsBar = () => {
   const stats = [
     { icon: Code2, value: "10", label: "Projects Completed", color: "#00d4ff", suffix: "+" },
     { icon: Users, value: "3", label: "Happy Clients", color: "#ff00ff", suffix: "+" },
-    { icon: Briefcase, value: "1", label: "Years Experience", color: "#ffaa00", suffix: "+" },
-    { icon: Cpu, value: "15", label: "Technologies Mastered", color: "#a855f7", suffix: "+" },
+    { icon: Briefcase, value: "4+", label: "Years Experience", color: "#ffaa00", suffix: "+" },
+    { icon: Cpu, value: "15+", label: "Technologies Mastered", color: "#a855f7", suffix: "+" },
   ];
 
   return (

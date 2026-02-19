@@ -25,20 +25,21 @@ const milestones = [
     icon: Rocket,
     color: "text-amber-400"
   },
-  {
-    year: "2025",
-    title: "Started doing a lot of new things",
-    description: "Coded apps that i would need in my day to day life. Solo travelled to new places. Started reading books that were not related to tech. Started doing a lot of things that i would have never imagined doing before. Hit the gym",
-    icon: Star,
-    color: "text-purple-400"
-  },
+ 
   {
     year: "2024 end",
     title: "Got my first Internship",
     description: "Joined Ifinity Global Pvt Ltd as an Intern Software Engineer. The real journey begins.",
     icon: Compass,
     color: "text-rose-400"
-  }
+  },
+   {
+    year: "2025",
+    title: "Started doing a lot of new things",
+    description: "Coded apps that i would need in my day to day life. Solo travelled to new places. Started reading books that were not related to tech. Started doing a lot of things that i would have never imagined doing before. Hit the gym",
+    icon: Star,
+    color: "text-purple-400"
+  },
 ];
 
 export const Journey = () => {

@@ -15,41 +15,114 @@ interface Certificate {
 
 const certificates: Certificate[] = [
   {
-    id: 'aws-saa',
-    title: 'AWS Solutions Architect Associate',
-    issuer: 'Amazon Web Services',
+    id: 'bpc-smartvista',
+    title: 'BPC Smart Vista',
+    issuer: 'BPC',
+    date: 'Sep 2025',
+    credentialId: 'ef74-2dc9-d5fd-a01b',
+    skills: ['Payment Processing', 'Smart Vista', 'Card Management', 'Financial Systems'],
+    seal: '◉',
+  },
+  {
+    id: 'azure-data',
+    title: 'Microsoft Certified: Azure Data Fundamentals',
+    issuer: 'Microsoft',
+    date: 'Apr 2025',
+    credentialId: 'B0C093B42DDC0B14',
+    verifyUrl: 'https://learn.microsoft.com/en-us/certifications/verify',
+    skills: ['Azure Data Services', 'SQL', 'NoSQL', 'Data Analytics', 'Cosmos DB'],
+    seal: '⊞',
+  },
+  {
+    id: 'ibm-watson',
+    title: 'watsonx.governance Sales Foundation',
+    issuer: 'IBM',
     date: '2024',
-    credentialId: 'AWS-ASA-123456',
-    verifyUrl: 'https://aws.amazon.com/certification',
-    skills: ['Cloud Architecture', 'EC2', 'S3', 'VPC', 'RDS'],
-    seal: '☁️',
+    skills: ['AI Governance', 'watsonx', 'Responsible AI', 'Model Risk Management'],
+    seal: '◈',
   },
   {
-    id: 'cka',
-    title: 'Certified Kubernetes Administrator',
-    issuer: 'Cloud Native Computing Foundation',
-    date: '2023',
-    credentialId: 'CKA-789012',
-    verifyUrl: 'https://www.cncf.io/certification',
-    skills: ['Kubernetes', 'Docker', 'Container Orchestration'],
-    seal: '☸️',
+    id: 'wso2-mi',
+    title: 'WSO2 Certified Micro Integrator Developer - V4',
+    issuer: 'WSO2',
+    date: 'Mar 2025',
+    credentialId: 'CID-04833911',
+    skills: ['ESB', 'Message Routing', 'Data Transformation', 'Enterprise Integration'],
+    seal: '⬡',
   },
   {
-    id: 'oracle-java',
-    title: 'Oracle Certified Professional: Java SE 17 Developer',
-    issuer: 'Oracle',
-    date: '2023',
-    credentialId: 'OCP-345678',
-    skills: ['Java', 'OOP', 'Concurrency', 'JVM'],
-    seal: '☕',
+    id: 'wso2-choreo',
+    title: 'WSO2 Certified Choreo Practitioner',
+    issuer: 'WSO2',
+    date: 'Feb 2025',
+    credentialId: 'CID-04833911',
+    skills: ['Cloud Native', 'Ballerina', 'iPaaS', 'Microservices'],
+    seal: '⬡',
   },
   {
-    id: 'spring-pro',
-    title: 'Spring Certified Professional',
-    issuer: 'VMware',
+    id: 'wso2-api',
+    title: 'WSO2 Certified API Manager Developer - V4',
+    issuer: 'WSO2',
+    date: 'Feb 2025',
+    credentialId: 'CID-04833911',
+    skills: ['API Gateway', 'REST', 'GraphQL', 'Rate Limiting', 'Developer Portal'],
+    seal: '⬡',
+  },
+  {
+    id: 'wso2-identity',
+    title: 'WSO2 Certified Identity Server Developer - V7',
+    issuer: 'WSO2',
+    date: 'Dec 2024',
+    credentialId: 'CID-04833911',
+    skills: ['IAM', 'OAuth 2.0', 'OIDC', 'SSO', 'Identity Federation'],
+    seal: '⬡',
+  },
+  {
+    id: 'azure-fundamentals',
+    title: 'Microsoft Certified: Azure Fundamentals',
+    issuer: 'Microsoft',
+    date: 'Dec 2024',
+    credentialId: 'B53FB7F81693CECE',
+    verifyUrl: 'https://learn.microsoft.com/en-us/certifications/verify',
+    skills: ['Azure', 'Cloud Concepts', 'Core Services', 'Security', 'Pricing'],
+    seal: '⊞',
+  },
+  {
+    id: 'google-ux',
+    title: 'Foundations of User Experience (UX) Design',
+    issuer: 'Google',
+    date: 'May 2024',
+    credentialId: 'E5Z8F8DN3BJW',
+    verifyUrl: 'https://coursera.org/verify/E5Z8F8DN3BJW',
+    skills: ['UX Research', 'User-Centered Design', 'Wireframing', 'Prototyping'],
+    seal: '◐',
+  },
+  {
+    id: 'pm-foundations',
+    title: 'Project Management Foundations (NASBA)',
+    issuer: 'LinkedIn Learning',
     date: '2024',
-    skills: ['Spring Boot', 'Spring Security', 'Microservices'],
-    seal: '🌿',
+    skills: ['Project Planning', 'Risk Management', 'Agile', 'Stakeholder Management'],
+    seal: '◧',
+  },
+  {
+    id: 'digital-marketing',
+    title: 'Digital Marketing Foundations',
+    issuer: 'LinkedIn',
+    date: 'Feb 2024',
+    credentialId: '34377003d604b14d',
+    skills: ['SEO', 'Content Strategy', 'Analytics', 'Social Media Marketing'],
+    seal: '◧',
+  },
+  {
+    id: 'excel-advanced',
+    title: 'Microsoft Excel – Beginner to Advanced',
+    issuer: 'Udemy',
+    date: 'Jun 2023',
+    credentialId: 'UC-96e19adf-17b3-4292-9c2a-8605d12bdf6e',
+    verifyUrl: 'https://www.udemy.com/certificate/UC-96e19adf-17b3-4292-9c2a-8605d12bdf6e',
+    skills: ['Excel', 'Pivot Tables', 'VBA Macros', 'Data Analysis', 'Advanced Formulas'],
+    seal: '◈',
   },
 ];
 
@@ -74,7 +147,7 @@ export const Certificates = () => {
             The Sealed Credentials
           </h2>
           <p className="font-serif italic text-white/60 max-w-xl mx-auto">
-            "Authority granted by trial and examination. Each seal represents 
+            "Authority granted by trial and examination. Each seal represents
             a covenant of knowledge with the great institutions."
           </p>
         </motion.div>
@@ -87,7 +160,7 @@ export const Certificates = () => {
               initial={{ opacity: 0, scale: 0.9 }}
               whileInView={{ opacity: 1, scale: 1 }}
               viewport={{ once: true }}
-              transition={{ delay: index * 0.15 }}
+              transition={{ delay: index * 0.08 }}
               onClick={() => setSelectedCert(cert)}
               className="group cursor-pointer"
             >
@@ -104,7 +177,7 @@ export const Certificates = () => {
                   <div className="p-3 rounded-full bg-[var(--gold)]/10 border border-[var(--gold)]/30">
                     <Award className="w-6 h-6 text-[var(--gold)]" />
                   </div>
-                  
+
                   <div className="flex-1">
                     <h3 className="font-serif text-xl text-white group-hover:text-[var(--gold)] transition-colors mb-1">
                       {cert.title}
@@ -112,10 +185,10 @@ export const Certificates = () => {
                     <p className="font-mono text-xs text-white/50 uppercase tracking-wider mb-3">
                       {cert.issuer} • {cert.date}
                     </p>
-                    
+
                     <div className="flex flex-wrap gap-2">
                       {cert.skills.map((skill) => (
-                        <span 
+                        <span
                           key={skill}
                           className="px-2 py-1 text-[10px] font-mono uppercase tracking-wider text-white/60 bg-white/5 border border-white/10 rounded"
                         >
@@ -173,11 +246,23 @@ export const Certificates = () => {
                       <span className="font-serif text-white">{selectedCert.date}</span>
                     </div>
                     {selectedCert.credentialId && (
-                      <div className="flex justify-between py-2 border-b border-white/10">
-                        <span className="font-mono text-xs text-white/50 uppercase">Credential ID</span>
-                        <span className="font-mono text-xs text-[var(--gold)]">{selectedCert.credentialId}</span>
+                      <div className="flex justify-between py-2 border-b border-white/10 gap-4">
+                        <span className="font-mono text-xs text-white/50 uppercase flex-shrink-0">Credential ID</span>
+                        <span className="font-mono text-xs text-[var(--gold)] break-all text-right">{selectedCert.credentialId}</span>
                       </div>
                     )}
+                  </div>
+
+                  {/* Skills in modal */}
+                  <div className="flex flex-wrap gap-2 justify-center mb-6">
+                    {selectedCert.skills.map((skill) => (
+                      <span
+                        key={skill}
+                        className="px-3 py-1 text-[10px] font-mono uppercase tracking-wider text-[var(--gold)] bg-[var(--gold)]/10 border border-[var(--gold)]/20 rounded"
+                      >
+                        {skill}
+                      </span>
+                    ))}
                   </div>
 
                   <div className="flex gap-3">

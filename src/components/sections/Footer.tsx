@@ -18,9 +18,9 @@ const socialLinks = [
     color: "hover:text-[#06b6d4]"
   },
   { 
-    icon: Mail, 
-    href: "mailto:aimansalam26@gmail.com", 
-    label: "Email",
+    icon: "M", 
+    href: "https://medium.com/@elrudoasm", 
+    label: "Medium",
     color: "hover:text-[#f43f5e]"
   }
 ];
@@ -167,27 +167,28 @@ export const Footer = () => {
                   <div>
                     <h4 className="text-xs font-mono text-[var(--gold)] uppercase tracking-[0.2em] mb-4">Connect</h4>
                     <div className="flex gap-3">
-                      {socialLinks.map((social, index) => {
-                        const Icon = social.icon;
-                        return (
-                          <motion.a
-                            key={social.label}
-                            href={social.href}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            initial={{ opacity: 0, scale: 0 }}
-                            whileInView={{ opacity: 1, scale: 1 }}
-                            viewport={{ once: true }}
-                            transition={{ delay: 0.4 + index * 0.1 }}
-                            whileHover={{ scale: 1.1, y: -2 }}
-                            whileTap={{ scale: 0.95 }}
-                            className={`w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-[var(--parchment)]/60 ${social.color} hover:bg-white/10 hover:border-[var(--gold)]/30 transition-all duration-300 backdrop-blur-sm`}
-                            aria-label={social.label}
-                          >
-                            <Icon className="w-4 h-4" />
-                          </motion.a>
-                        );
-                      })}
+                      {socialLinks.map((social, index) => (
+                        <motion.a
+                          key={social.label}
+                          href={social.href}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          initial={{ opacity: 0, scale: 0 }}
+                          whileInView={{ opacity: 1, scale: 1 }}
+                          viewport={{ once: true }}
+                          transition={{ delay: 0.4 + index * 0.1 }}
+                          whileHover={{ scale: 1.1, y: -2 }}
+                          whileTap={{ scale: 0.95 }}
+                          className={`w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-[var(--parchment)]/60 ${social.color} hover:bg-white/10 hover:border-[var(--gold)]/30 transition-all duration-300 backdrop-blur-sm`}
+                          aria-label={social.label}
+                        >
+                          {typeof social.icon === "string" ? (
+                            <span className="text-sm font-serif font-bold">{social.icon}</span>
+                          ) : (
+                            <social.icon className="w-4 h-4" />
+                          )}
+                        </motion.a>
+                      ))}
                     </div>
                   </div>
 
@@ -197,6 +198,7 @@ export const Footer = () => {
                   </div>
                 </motion.div>
               </div>
+
             </div>
 
             {/* Quote Section */}

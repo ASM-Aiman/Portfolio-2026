@@ -1,7 +1,7 @@
 import React, { useRef, useEffect, useState, useMemo, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
-import { techPlanets, planetShells, subscribeToVisibility, allTechNames } from '../sections/Technologies';
+import { motion, AnimatePresence } from 'framer-motion';
+import { techPlanets, planetShells, subscribeToVisibility } from '../sections/Technologies';
 
 interface AtmosphereProps {
   onPhysicsUpdate?: (physics: any) => void;
@@ -9,126 +9,96 @@ interface AtmosphereProps {
 
 const shellNeonColors = ['#00d4ff', '#ff00ff', '#ffaa00'];
 
-// ─── Sky states ───────────────────────────────────────────────────────────────
+// ─── Sky states ────────────────────────────────────────────────────────────────
 const SKY_STATES = {
-  noon:      { st:[15,25,70],   sb:[70,130,220], su:[255,255,240], gl:[220,230,255], hz:[120,170,255], so:0,    phase:'Noon',      short:'Blue skies ahead',          full:'Light travels the shortest path.' },
-  afternoon: { st:[50,60,40],   sb:[200,160,120],su:[255,235,180], gl:[255,200,155], hz:[255,200,120], so:0,    phase:'Afternoon', short:'The sun descends',           full:'Longer wavelengths emerge.' },
-  sunset:    { st:[30,40,60],   sb:[255,120,60], su:[255,180,100], gl:[255,140,80],  hz:[255,100,60],  so:0.15, phase:'Sunset',    short:'Golden hour',                full:'Blue scatters — reds remain.' },
-  twilight:  { st:[15,15,40],   sb:[255,100,60], su:[255,140,100], gl:[255,100,80],  hz:[180,60,60],   so:0.35, phase:'Twilight',  short:'The horizon glows',          full:'Scattered light paints the sky.' },
-  dusk:      { st:[8,8,25],     sb:[50,40,90],   su:[255,120,80],  gl:[80,50,80],    hz:[50,35,60],    so:0.65, phase:'Dusk',      short:'Stars emerge',               full:'Twilight fades to indigo.' },
-  night:     { st:[5,5,20],     sb:[15,13,30],   su:[255,150,100], gl:[60,40,80],    hz:[40,30,50],    so:0.85, phase:'Night',     short:'Stars hold dominion',        full:'Only ancient light remains.' },
+  noon:      { st:[15,25,70],   sb:[70,130,220], su:[255,255,240], gl:[220,230,255], hz:[120,170,255], so:0,    phase:'Noon' },
+  afternoon: { st:[50,60,40],   sb:[200,160,120],su:[255,235,180], gl:[255,200,155], hz:[255,200,120], so:0,    phase:'Afternoon' },
+  sunset:    { st:[30,40,60],   sb:[255,120,60], su:[255,180,100], gl:[255,140,80],  hz:[255,100,60],  so:0.15, phase:'Sunset' },
+  twilight:  { st:[15,15,40],   sb:[255,100,60], su:[255,140,100], gl:[255,100,80],  hz:[180,60,60],   so:0.35, phase:'Twilight' },
+  dusk:      { st:[8,8,25],     sb:[50,40,90],   su:[255,120,80],  gl:[80,50,80],    hz:[50,35,60],    so:0.65, phase:'Dusk' },
+  night:     { st:[5,5,20],     sb:[15,13,30],   su:[255,150,100], gl:[60,40,80],    hz:[40,30,50],    so:0.85, phase:'Night' },
 } as const;
-
 type SkyKey = keyof typeof SKY_STATES;
 
 const getPhaseLabel = (alt: number): SkyKey => {
-  if (alt > 60) return 'noon';
-  if (alt > 30) return 'afternoon';
-  if (alt > 5)  return 'sunset';
-  if (alt > -5) return 'twilight';
-  if (alt > -15) return 'dusk';
-  return 'night';
+  if (alt > 60) return 'noon'; if (alt > 30) return 'afternoon';
+  if (alt > 5) return 'sunset'; if (alt > -5) return 'twilight';
+  if (alt > -15) return 'dusk'; return 'night';
 };
 
 const progressToAltitude = (p: number): number => {
-  const keys = [[0.00,90],[0.20,65],[0.40,30],[0.55,8],[0.65,-2],[0.78,-12],[1.00,-25]] as [number,number][];
+  const keys = [[0,90],[0.2,65],[0.4,30],[0.55,8],[0.65,-2],[0.78,-12],[1,-25]] as [number,number][];
   for (let i = 0; i < keys.length - 1; i++) {
-    const [p0,a0] = keys[i]; const [p1,a1] = keys[i+1];
-    if (p <= p1) return a0 + (a1-a0) * (p-p0)/(p1-p0);
+    const [p0,a0]=keys[i],[p1,a1]=keys[i+1];
+    if (p<=p1) return a0+(a1-a0)*(p-p0)/(p1-p0);
   }
   return -25;
 };
 
 const computeSkyColors = (alt: number) => {
-  const lerp = (a: number, b: number, t: number) => a + (b-a)*t;
-  const lc = (c1: readonly number[], c2: readonly number[], t: number): number[] =>
-    [lerp(c1[0],c2[0],t), lerp(c1[1],c2[1],t), lerp(c1[2],c2[2],t)];
-  const S = SKY_STATES;
-  const mix = (a: SkyKey, b: SkyKey, t: number) => ({
-    st: lc(S[a].st,S[b].st,t), sb: lc(S[a].sb,S[b].sb,t),
-    su: lc(S[a].su,S[b].su,t), gl: lc(S[a].gl,S[b].gl,t),
-    hz: lc(S[a].hz,S[b].hz,t), so: lerp(S[a].so,S[b].so,t),
+  const lerp=(a:number,b:number,t:number)=>a+(b-a)*t;
+  const lc=(c1:readonly number[],c2:readonly number[],t:number):number[]=>
+    [lerp(c1[0],c2[0],t),lerp(c1[1],c2[1],t),lerp(c1[2],c2[2],t)];
+  const S=SKY_STATES;
+  const mix=(a:SkyKey,b:SkyKey,t:number)=>({
+    st:lc(S[a].st,S[b].st,t),sb:lc(S[a].sb,S[b].sb,t),
+    su:lc(S[a].su,S[b].su,t),gl:lc(S[a].gl,S[b].gl,t),
+    hz:lc(S[a].hz,S[b].hz,t),so:lerp(S[a].so,S[b].so,t),
   });
-  let cs;
-  if      (alt > 60)  cs = mix('noon','afternoon',(90-alt)/30);
-  else if (alt > 30)  cs = mix('afternoon','sunset',(60-alt)/30);
-  else if (alt > 5)   cs = mix('sunset','twilight',(30-alt)/25);
-  else if (alt > -5)  cs = mix('twilight','dusk',(5-alt)/10);
-  else if (alt > -15) cs = mix('dusk','night',(-5-alt)/10);
-  else                cs = mix('night','night',Math.min(1,(-15-alt)/10));
-  const rgb = (a: number[]) => `rgb(${a.map(v=>Math.max(0,Math.min(255,Math.round(v)))).join(',')})`;
-  return { cs, rgb };
+  let cs:ReturnType<typeof mix>;
+  if(alt>60) cs=mix('noon','afternoon',(90-alt)/30);
+  else if(alt>30) cs=mix('afternoon','sunset',(60-alt)/30);
+  else if(alt>5) cs=mix('sunset','twilight',(30-alt)/25);
+  else if(alt>-5) cs=mix('twilight','dusk',(5-alt)/10);
+  else if(alt>-15) cs=mix('dusk','night',(-5-alt)/10);
+  else cs=mix('night','night',Math.min(1,(-15-alt)/10));
+  const rgb=(a:number[])=>`rgb(${a.map(v=>Math.max(0,Math.min(255,Math.round(v)))).join(',')})`;
+  return {cs,rgb};
 };
 
-// ─── Chaotic entry: truly random scatter from any edge + interior explosion ──
-// Each planet gets a seeded random origin far off screen in a random direction
 const seededRandom = (seed: number) => {
   const x = Math.sin(seed * 9301 + 49297) * 233280;
   return x - Math.floor(x);
 };
 
-const getChaosOrigin = (index: number, vw: number, vh: number) => {
-  // Random angle outward from center, pushed way off screen
-  const angle = seededRandom(index * 3.7) * Math.PI * 2;
-  const dist = Math.max(vw, vh) * (1.2 + seededRandom(index * 1.3) * 0.8);
-  return {
-    x: vw * 0.5 + Math.cos(angle) * dist,
-    y: vh * 0.5 + Math.sin(angle) * dist,
-    angle,
-  };
-};
+function easeOutBack(t: number): number {
+  const c1=1.70158, c3=c1+1;
+  return 1+c3*Math.pow(t-1,3)+c1*Math.pow(t-1,2);
+}
+function easeInCubic(t: number): number { return t*t*t; }
 
-// Exit: scatter to a different random direction
-const getChaosExit = (index: number, vw: number, vh: number, currentX: number, currentY: number) => {
-  const seed = index * 7.7 + 99;
-  const angle = seededRandom(seed) * Math.PI * 2;
-  const dist = Math.max(vw, vh) * (1.3 + seededRandom(seed + 1) * 0.5);
-  return {
-    x: currentX + Math.cos(angle) * dist,
-    y: currentY + Math.sin(angle) * dist,
-  };
-};
-
-// ─── PlanetTooltip portal ─────────────────────────────────────────────────────
-const PlanetTooltip = ({ planet, anchorX, anchorY, isLocked, isHovered }: {
-  planet: typeof techPlanets[0]; anchorX: number; anchorY: number;
-  isLocked: boolean; isHovered: boolean;
+// ─── Tooltip portal ────────────────────────────────────────────────────────────
+const PlanetTooltip = ({ planet, x, y, isLocked }: {
+  planet: typeof techPlanets[0]; x: number; y: number; isLocked: boolean;
 }) => {
-  const neonColor = shellNeonColors[planet.shell || 0];
-  if (!anchorX || !anchorY || isNaN(anchorX) || isNaN(anchorY)) return null;
+  const neon = shellNeonColors[planet.shell||0];
+  if (!x||!y||isNaN(x)||isNaN(y)) return null;
   return createPortal(
-    <motion.div
-      initial={{ opacity: 0, scale: 0.8, y: -8 }}
-      animate={{ opacity: 1, scale: 1, y: 0 }}
-      exit={{ opacity: 0, scale: 0.8, y: -8 }}
-      transition={{ duration: 0.18, ease: 'easeOut' }}
-      style={{ position:'fixed', left:anchorX, top:anchorY+10, transform:'translateX(-50%)', zIndex:9999, pointerEvents:'none' }}
+    <motion.div initial={{opacity:0,scale:0.85,y:-6}} animate={{opacity:1,scale:1,y:0}}
+      exit={{opacity:0,scale:0.85,y:-6}} transition={{duration:0.15}}
+      style={{position:'fixed',left:x,top:y,transform:'translateX(-50%)',zIndex:9999,pointerEvents:'none'}}
     >
       <div style={{
-        background:'rgba(0,0,0,0.85)', border:`1px solid ${neonColor}`,
-        borderRadius:8, padding:'7px 12px', minWidth:120,
-        boxShadow:`0 0 18px ${neonColor}40, 0 4px 20px rgba(0,0,0,0.7)`,
-        backdropFilter:'blur(14px)', position:'relative',
+        background:'rgba(0,0,0,0.88)',border:`1px solid ${neon}`,borderRadius:8,
+        padding:'6px 11px',minWidth:110,position:'relative',
+        boxShadow:`0 0 16px ${neon}40`,backdropFilter:'blur(14px)',
       }}>
-        {[0,1,2,3].map(i => (
+        {[0,1,2,3].map(i=>(
           <div key={i} style={{
-            position:'absolute', width:5, height:5,
-            borderTop:    i<2  ? `1px solid ${neonColor}` : 'none',
-            borderBottom: i>=2 ? `1px solid ${neonColor}` : 'none',
-            borderLeft:   i%2===0 ? `1px solid ${neonColor}` : 'none',
-            borderRight:  i%2===1 ? `1px solid ${neonColor}` : 'none',
-            top: i<2?3:'auto', bottom: i>=2?3:'auto',
-            left: i%2===0?3:'auto', right: i%2===1?3:'auto',
-          }} />
+            position:'absolute',width:4,height:4,
+            borderTop:i<2?`1px solid ${neon}`:'none',borderBottom:i>=2?`1px solid ${neon}`:'none',
+            borderLeft:i%2===0?`1px solid ${neon}`:'none',borderRight:i%2===1?`1px solid ${neon}`:'none',
+            top:i<2?3:'auto',bottom:i>=2?3:'auto',left:i%2===0?3:'auto',right:i%2===1?3:'auto',
+          }}/>
         ))}
-        <div style={{ color:neonColor, fontFamily:'monospace', fontSize:10, fontWeight:700, letterSpacing:2, textTransform:'uppercase', textShadow:`0 0 8px ${neonColor}` }}>
+        <div style={{color:neon,fontFamily:'monospace',fontSize:9,fontWeight:700,letterSpacing:2,textTransform:'uppercase',textShadow:`0 0 6px ${neon}`}}>
           {planet.name}
         </div>
-        <div style={{ color:'rgba(255,255,255,0.65)', fontFamily:'monospace', fontSize:9, marginTop:2 }}>
+        <div style={{color:'rgba(255,255,255,0.6)',fontFamily:'monospace',fontSize:8,marginTop:2}}>
           {planet.description}
         </div>
-        <div style={{ color:neonColor, fontFamily:'monospace', fontSize:8, marginTop:3, opacity:0.5, letterSpacing:1 }}>
-          {isLocked ? 'ORBIT LOCKED' : 'SCANNING...'}
+        <div style={{color:neon,fontFamily:'monospace',fontSize:7,marginTop:3,opacity:0.5,letterSpacing:1}}>
+          {isLocked?'ORBIT LOCKED':'SCANNING...'}
         </div>
       </div>
     </motion.div>,
@@ -136,604 +106,717 @@ const PlanetTooltip = ({ planet, anchorX, anchorY, isLocked, isHovered }: {
   );
 };
 
-// ─── TechPlanet ───────────────────────────────────────────────────────────────
-const TechPlanet = ({
-  planet, planetIndex, sunX, sunY, viewportWidth, viewportHeight,
-  altitude, isActive, globalHoveredPlanet, setGlobalHoveredPlanet, revealAll,
-}: {
-  planet: typeof techPlanets[0]; planetIndex: number;
-  sunX: number; sunY: number; viewportWidth: number; viewportHeight: number;
-  altitude: number; isActive: boolean;
-  globalHoveredPlanet: string | null;
-  setGlobalHoveredPlanet: (n: string | null) => void;
-  revealAll: boolean;
-}) => {
-  const prefersReducedMotion = useReducedMotion();
-  const [angle, setAngle] = useState((planet.initialAngle || 0) * Math.PI / 180);
-  const [isPaused, setIsPaused] = useState(false);
-  const [isHovered, setIsHovered] = useState(false);
-  const [isLocked, setIsLocked] = useState(false);
-  const [hasMounted, setHasMounted] = useState(false);
-  const [isPlanetVisible, setIsPlanetVisible] = useState(false);
-  const [exitTarget, setExitTarget] = useState({ x: 0, y: 0 });
-  const [isExiting, setIsExiting] = useState(false);
-  const planetRef = useRef<HTMLDivElement>(null);
-  const labelRef = useRef<HTMLDivElement>(null);
-  const trackRafRef = useRef<number>(0);
-  const orbitRafRef = useRef<number>(0);
-  const angleRef = useRef(angle);
+// ─── MOBILE: Interactive Constellation Star Map ────────────────────────────────
+const MobileConstellationMap = ({ isVisible }: { isVisible: boolean }) => {
+  const [selected, setSelected] = useState<number|null>(null);
+  const W=360, H=400;
 
-  const shell = planetShells[planet.shell || 0];
-  const pixelRadius = viewportWidth * shell.radius;
-  const neonColor = shellNeonColors[planet.shell || 0];
-  const isDimmed = !!(globalHoveredPlanet && globalHoveredPlanet !== planet.name && !isHovered);
+  // Fixed positions — artfully arranged, 3 shells visible
+  const starPos: [number,number][] = useMemo(()=>[
+    // Shell 0 core triangle
+    [180,115],[138,152],[222,152],
+    // Shell 1 ring
+    [86,88],[274,88],[52,188],[308,188],[75,278],[285,272],
+    // Shell 2 outer
+    [128,48],[232,48],[180,22],[36,138],[324,138],
+    [28,242],[332,242],[180,385],
+  ],[]);
 
-  // Compute position from current angle
-  const x = sunX + Math.cos(angle) * pixelRadius;
-  const y = sunY + Math.sin(angle) * pixelRadius * 0.5;
+  const constellationLines: [number,number][] = useMemo(()=>[
+    // Core shell 0
+    [0,1],[1,2],[2,0],
+    // Shell 1
+    [3,0],[4,0],[5,3],[6,4],[7,5],[8,6],[7,1],[8,2],
+    // Shell 2
+    [9,3],[10,4],[11,9],[11,10],[12,5],[13,6],[14,7],[15,8],[16,7],[16,8],
+  ],[]);
 
-  // Keep angleRef in sync for exit calc
-  useEffect(() => { angleRef.current = angle; }, [angle]);
-
-  // Entry: staggered mount with varied delays
-  useEffect(() => {
-    if (!isActive || hasMounted) return;
-    // Varied stagger: not perfectly linear, adds chaos
-    const baseDelay = planetIndex * 110;
-    const jitter = seededRandom(planetIndex * 4.2) * 250;
-    const timer = setTimeout(() => setHasMounted(true), baseDelay + jitter + 200);
-    return () => clearTimeout(timer);
-  }, [isActive, hasMounted, planetIndex]);
-
-  // Reset hasMounted when section leaves view (triggers re-entry animation next time)
-  useEffect(() => {
-    if (isActive) return;
-    // Trigger chaotic exit first
-    const currentX = sunX + Math.cos(angleRef.current) * pixelRadius;
-    const currentY = sunY + Math.sin(angleRef.current) * pixelRadius * 0.5;
-    const exit = getChaosExit(planetIndex, viewportWidth, viewportHeight, currentX, currentY);
-    setExitTarget(exit);
-    setIsExiting(true);
-
-    const t1 = setTimeout(() => {
-      setIsPlanetVisible(false);
-      setIsExiting(false);
-    }, 700);
-    const t2 = setTimeout(() => setHasMounted(false), 900);
-    return () => { clearTimeout(t1); clearTimeout(t2); };
-  }, [isActive]);
-
-  useEffect(() => {
-    const offScreen = y > viewportHeight + 150;
-    const tooLow = altitude < -30;
-    const should = !offScreen && !tooLow && isActive && hasMounted && !isExiting;
-    if (should && !isPlanetVisible) setIsPlanetVisible(true);
-    else if (!should && isPlanetVisible && !isExiting) {
-      setTimeout(() => setIsPlanetVisible(false), 150);
-    }
-  }, [y, altitude, isActive, hasMounted, isExiting, viewportHeight]);
-
-  // Orbit loop
-  useEffect(() => {
-    if (!isActive) return;
-    let last = performance.now();
-    const animate = (now: number) => {
-      const delta = (now - last) / 1000;
-      last = now;
-      const slow = isPaused || isLocked || (globalHoveredPlanet && globalHoveredPlanet !== planet.name);
-      setAngle(prev => prev + (slow ? shell.speed * 0.04 : shell.speed) * delta);
-      orbitRafRef.current = requestAnimationFrame(animate);
-    };
-    orbitRafRef.current = requestAnimationFrame(animate);
-    return () => cancelAnimationFrame(orbitRafRef.current);
-  }, [isActive, shell.speed, isPaused, isLocked, globalHoveredPlanet]);
-
-  const inFront = Math.sin(angle) > 0;
-  const depthScale = isLocked ? 2.2 : isHovered ? 1.8 : (inFront ? 1.15 : 0.78);
-  const brightness = inFront ? 1.15 : 0.55;
-  const zIndex = inFront ? 100 : 10;
-  const planetSize = planet.size || 24;
-  const entryOrigin = getChaosOrigin(planetIndex, viewportWidth, viewportHeight);
-
-  // Label: always visible, fades with planet
-  const labelOffset = planetSize * 0.5 + 10;
-
-  const handleMouseEnter = useCallback(() => {
-    setIsHovered(true); setIsPaused(true);
-    setGlobalHoveredPlanet(planet.name);
-  }, [planet.name, setGlobalHoveredPlanet]);
-
-  const handleMouseLeave = useCallback(() => {
-    if (!isLocked) { setIsHovered(false); setIsPaused(false); setGlobalHoveredPlanet(null); }
-  }, [isLocked, setGlobalHoveredPlanet]);
-
-  const handleClick = useCallback((e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (isLocked) { setIsLocked(false); setGlobalHoveredPlanet(null); }
-    else { setIsLocked(true); setGlobalHoveredPlanet(planet.name); }
-  }, [isLocked, planet.name, setGlobalHoveredPlanet]);
-
-  const showDetailTooltip = (isHovered || isLocked) && isPlanetVisible;
-
-  // For exit animation — fly to chaos exit point
-  const animateTarget = isExiting
-    ? { opacity: 0, x: exitTarget.x, y: exitTarget.y, scale: 0.1, filter: `brightness(5) blur(16px)` }
-    : { opacity: isDimmed ? 0.15 : 1, x, y, scale: depthScale, filter: `brightness(${brightness}) blur(0px)` };
-
-  return (
-    <>
-      <AnimatePresence>
-        {(isPlanetVisible || isExiting) && (
-          <motion.div
-            key={`planet-${planet.name}`}
-            ref={planetRef}
-            initial={prefersReducedMotion ? { opacity: 0, x, y } : {
-              opacity: 0,
-              x: entryOrigin.x,
-              y: entryOrigin.y,
-              scale: 0.1,
-              filter: `brightness(6) blur(18px)`,
-            }}
-            animate={animateTarget}
-            exit={{ opacity: 0, scale: 0.05, filter: `brightness(6) blur(20px)`,
-              transition: { duration: 0.4, ease: 'easeIn' } }}
-            transition={isExiting ? {
-              x: { duration: 0.65, ease: [0.4, 0, 1, 1] },
-              y: { duration: 0.65, ease: [0.4, 0, 1, 1] },
-              opacity: { duration: 0.5, ease: 'easeIn' },
-              scale: { duration: 0.6, ease: 'easeIn' },
-              filter: { duration: 0.5 },
-            } : {
-              x: { duration: 0.05, ease: 'linear' },
-              y: { duration: 0.05, ease: 'linear' },
-              opacity: { duration: 1.1, ease: 'easeOut' },
-              scale: { duration: 0.8, ease: [0.34, 1.6, 0.64, 1] },
-              filter: { duration: 1.2, ease: 'easeOut' },
-            }}
-            style={{
-              position: 'fixed',
-              width: planetSize, height: planetSize,
-              marginLeft: -planetSize / 2, marginTop: -planetSize / 2,
-              zIndex,
-              cursor: 'pointer',
-              pointerEvents: isActive && !isExiting ? 'auto' : 'none',
-            }}
-            onMouseEnter={handleMouseEnter}
-            onMouseLeave={handleMouseLeave}
-            onClick={handleClick}
-          >
-            {/* Outer atmosphere glow */}
-            <div style={{
-              position: 'absolute',
-              inset: `-${planetSize * 1.5}px`,
-              borderRadius: '50%',
-              background: `radial-gradient(circle, ${neonColor}25 0%, ${neonColor}08 50%, transparent 70%)`,
-              filter: `blur(${planetSize * 0.4}px)`,
-              transition: 'all 0.4s ease',
-            }} />
-
-            {/* Spinning neon ring */}
-            <div style={{
-              position: 'absolute', inset: -3, borderRadius: '50%',
-              border: `1px solid ${neonColor}`,
-              boxShadow: `0 0 ${isHovered||isLocked ? 14 : 5}px ${neonColor}, inset 0 0 ${isHovered||isLocked ? 10:3}px ${neonColor}40`,
-              transition: 'box-shadow 0.3s ease',
-              animation: 'atmo-spin 9s linear infinite',
-            }} />
-
-            {/* Dashed scan ring on hover */}
-            {(isHovered || isLocked || revealAll) && (
-              <motion.div initial={{ scale: 1.6, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
-                style={{ position:'absolute', inset:-9, borderRadius:'50%', border:`1px dashed ${neonColor}70`, animation:'atmo-spin-rev 4s linear infinite' }}
-              />
-            )}
-
-            {/* Planet core sphere */}
-            <div style={{
-              position: 'absolute', inset: 0, borderRadius: '50%',
-              background: `radial-gradient(circle at 33% 33%, ${planet.color}ff, ${planet.color}99 55%, ${planet.color}30)`,
-              boxShadow: `0 0 ${planetSize*0.45}px ${planet.color}55, inset 0 0 ${planetSize*0.25}px rgba(255,255,255,0.25)`,
-            }} />
-
-            {/* Symbol */}
-            <div style={{
-              position: 'absolute', inset: 0,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: planetSize * 0.44, lineHeight: 1,
-              filter: `drop-shadow(0 0 3px ${neonColor})`,
-              userSelect: 'none',
-            }}>
-              {planet.symbol}
-            </div>
-
-            {/* Lock badge */}
-            {isLocked && (
-              <div style={{ position:'absolute', top:-16, right:-6, fontSize:9, opacity:0.9 }}>🔒</div>
-            )}
-
-            {/* ── Always-visible label beneath planet ── */}
-            <motion.div
-              initial={{ opacity: 0, y: 4 }}
-              animate={{ opacity: isDimmed ? 0.1 : (isHovered || isLocked ? 1 : 0.75), y: 0 }}
-              transition={{ duration: 0.3 }}
-              style={{
-                position: 'absolute',
-                top: '100%',
-                left: '50%',
-                transform: 'translateX(-50%)',
-                marginTop: 6,
-                pointerEvents: 'none',
-                whiteSpace: 'nowrap',
-                textAlign: 'center',
-              }}
-            >
-              <div style={{
-                fontFamily: 'monospace',
-                fontSize: Math.max(8, planetSize * 0.32),
-                fontWeight: 700,
-                letterSpacing: 1,
-                color: isHovered || isLocked ? neonColor : 'rgba(255,255,255,0.85)',
-                textShadow: isHovered || isLocked
-                  ? `0 0 10px ${neonColor}, 0 0 20px ${neonColor}60`
-                  : `0 1px 6px rgba(0,0,0,0.8), 0 0 12px rgba(0,0,0,0.5)`,
-                transition: 'color 0.2s ease, text-shadow 0.2s ease',
-                backdropFilter: 'blur(2px)',
-              }}>
-                {planet.name}
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Detailed tooltip on hover/lock */}
-      <AnimatePresence>
-        {showDetailTooltip && (
-          <PlanetTooltip
-            planet={planet}
-            anchorX={x}
-            anchorY={y + planetSize / 2 + 28}
-            isLocked={isLocked}
-            isHovered={isHovered}
-          />
-        )}
-      </AnimatePresence>
-    </>
-  );
-};
-
-// ─── OrbitalRing ──────────────────────────────────────────────────────────────
-const OrbitalRing = ({ sunX, sunY, radius, color, isActive, viewportWidth, isHighlighted }: {
-  sunX: number; sunY: number; radius: number; color: string;
-  isActive: boolean; viewportWidth: number; isHighlighted?: boolean;
-}) => {
-  const px = viewportWidth * radius;
-  return (
-    <motion.div
-      initial={{ opacity: 0, scale: 0.4 }}
-      animate={{ opacity: isActive ? (isHighlighted ? 0.45 : 0.12) : 0, scale: isActive ? 1 : 0.4 }}
-      transition={{ duration: 1.0, ease: [0.34, 1.2, 0.64, 1] }}
-      style={{
-        position: 'fixed', left: sunX, top: sunY,
-        width: px*2, height: px,
-        marginLeft: -px, marginTop: -px/2,
-        borderRadius: '50%',
-        border: `1px solid ${color}`,
-        boxShadow: isHighlighted ? `0 0 14px ${color}50` : 'none',
-        pointerEvents: 'none', zIndex: 5,
-        transition: 'box-shadow 0.3s ease',
-      }}
-    />
-  );
-};
-
-// ─── Mobile Tech Marquee ──────────────────────────────────────────────────────
-const MobileTechMarquee = ({ isVisible }: { isVisible: boolean }) => {
-  const neonFor = (name: string) => shellNeonColors[techPlanets.find(p=>p.name===name)?.shell || 0];
-  const colorFor = (name: string) => techPlanets.find(p=>p.name===name)?.color || '#61dafb';
-  const symFor = (name: string) => techPlanets.find(p=>p.name===name)?.symbol || '◉';
-
-  // Three rows, cycling differently
-  const chunk = Math.ceil(allTechNames.length / 3);
-  const rows = [
-    allTechNames.slice(0, chunk),
-    allTechNames.slice(chunk, chunk*2),
-    allTechNames.slice(chunk*2),
-  ];
-  const speeds = [20, 27, 23];
-  const dirs = [1, -1, 1]; // alternating scroll directions
+  const sel = selected!==null ? techPlanets[selected] : null;
+  const selNeon = sel ? shellNeonColors[sel.shell||0] : '#00d4ff';
 
   return (
     <AnimatePresence>
       {isVisible && (
         <motion.div
-          initial={{ opacity: 0, y: 40 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: 40 }}
-          transition={{ duration: 0.8, ease: 'easeOut' }}
+          initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}}
+          transition={{duration:0.8}}
           style={{
-            position: 'fixed', bottom: 0, left: 0, right: 0,
-            zIndex: 20, pointerEvents: 'none',
-            padding: '12px 0 calc(12px + env(safe-area-inset-bottom))',
-            background: 'linear-gradient(to top, rgba(0,0,0,0.35) 0%, transparent 100%)',
-            backdropFilter: 'blur(2px)',
+            position:'fixed',inset:0,zIndex:20,
+            display:'flex',flexDirection:'column',
+            alignItems:'center',justifyContent:'center',
+            pointerEvents:'none',
           }}
         >
-          {rows.map((row, rowIdx) => (
-            <div key={rowIdx} style={{ overflow: 'hidden', marginBottom: 7 }}>
-              <motion.div
-                animate={{ x: dirs[rowIdx] === 1 ? ['0%', '-50%'] : ['-50%', '0%'] }}
-                transition={{ duration: speeds[rowIdx], ease: 'linear', repeat: Infinity }}
-                style={{ display: 'flex', gap: 10, whiteSpace: 'nowrap', width: 'max-content' }}
-              >
-                {[...row, ...row].map((name, i) => {
-                  const neon = neonFor(name);
-                  const col = colorFor(name);
-                  const sym = symFor(name);
-                  return (
-                    <div key={`${name}-${rowIdx}-${i}`} style={{
-                      display: 'inline-flex', alignItems: 'center', gap: 5,
-                      padding: '4px 11px 4px 8px',
-                      borderRadius: 16,
-                      border: `1px solid ${neon}35`,
-                      background: `linear-gradient(135deg, ${col}18, ${neon}08)`,
-                      backdropFilter: 'blur(8px)',
-                    }}>
-                      <span style={{ fontSize: 12 }}>{sym}</span>
-                      <span style={{
-                        fontFamily: 'monospace', fontSize: 10,
-                        fontWeight: 700, letterSpacing: 0.8,
-                        color: 'rgba(255,255,255,0.88)',
-                        textShadow: `0 0 8px ${neon}80`,
-                      }}>
-                        {name}
-                      </span>
-                    </div>
-                  );
-                })}
-              </motion.div>
+          {/* Header */}
+          <motion.div initial={{opacity:0,y:-14}} animate={{opacity:1,y:0}}
+            transition={{delay:0.3,duration:0.6}}
+            style={{textAlign:'center',marginBottom:8,pointerEvents:'none'}}
+          >
+            <div style={{fontFamily:'monospace',fontSize:9,letterSpacing:5,textTransform:'uppercase',color:'rgba(255,255,255,0.28)',marginBottom:3}}>
+              Star Chart · Signal Stack
             </div>
-          ))}
+            <div style={{fontFamily:'monospace',fontSize:9,color:'rgba(255,255,255,0.18)',letterSpacing:1}}>
+              Tap a star to identify
+            </div>
+          </motion.div>
+
+          {/* SVG Star Map */}
+          <motion.div
+            initial={{scale:0.82,opacity:0}} animate={{scale:1,opacity:1}}
+            transition={{delay:0.4,duration:0.9,ease:[0.34,1.2,0.64,1]}}
+            style={{position:'relative',pointerEvents:'auto'}}
+          >
+            <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`}
+              style={{display:'block'}} onClick={()=>setSelected(null)}
+            >
+              {/* Atlas grid */}
+              {[1,2,3,4].map(i=>(
+                <line key={`h${i}`} x1={0} y1={i*H/5} x2={W} y2={i*H/5}
+                  stroke="rgba(255,255,255,0.03)" strokeWidth="0.5"/>
+              ))}
+              {[1,2,3].map(i=>(
+                <line key={`v${i}`} x1={i*W/4} y1={0} x2={i*W/4} y2={H}
+                  stroke="rgba(255,255,255,0.03)" strokeWidth="0.5"/>
+              ))}
+
+              {/* Constellation lines */}
+              {constellationLines.map(([a,b],i)=>{
+                const pa=starPos[a],pb=starPos[b];
+                if(!pa||!pb) return null;
+                const neon=shellNeonColors[techPlanets[a]?.shell||0];
+                const active=selected===a||selected===b;
+                return (
+                  <motion.line key={i} x1={pa[0]} y1={pa[1]} x2={pb[0]} y2={pb[1]}
+                    stroke={active?neon:'rgba(255,255,255,0.07)'}
+                    strokeWidth={active?1.2:0.5}
+                    initial={{pathLength:0,opacity:0}}
+                    animate={{pathLength:1,opacity:1}}
+                    transition={{delay:0.5+i*0.035,duration:0.9}}
+                  />
+                );
+              })}
+
+              {/* Stars */}
+              {techPlanets.map((planet,i)=>{
+                const pos=starPos[i];
+                if(!pos) return null;
+                const neon=shellNeonColors[planet.shell||0];
+                const isSel=selected===i;
+                const r=planet.shell===0?5.5:planet.shell===1?4.2:3.5;
+
+                return (
+                  <g key={planet.name}
+                    onClick={e=>{e.stopPropagation();setSelected(isSel?null:i)}}
+                    style={{cursor:'pointer'}}
+                  >
+                    {/* Tap target */}
+                    <circle cx={pos[0]} cy={pos[1]} r={22} fill="transparent"/>
+                    {/* Ambient glow */}
+                    <circle cx={pos[0]} cy={pos[1]} r={isSel?24:14}
+                      fill={`${neon}${isSel?'25':'10'}`}
+                      style={{transition:'r 0.3s,fill 0.3s'}}
+                    />
+                    {/* Selection ring */}
+                    {isSel&&(
+                      <motion.circle cx={pos[0]} cy={pos[1]} r={18}
+                        fill="none" stroke={neon} strokeWidth="1" opacity="0.5"
+                        initial={{scale:0.4,opacity:0}} animate={{scale:1,opacity:0.5}}
+                        transition={{duration:0.35}}
+                      />
+                    )}
+                    {/* Star core */}
+                    <circle cx={pos[0]} cy={pos[1]} r={isSel?r*1.75:r}
+                      fill={isSel?neon:`${neon}cc`}
+                      stroke={isSel?'rgba(255,255,255,0.8)':'none'}
+                      strokeWidth={isSel?0.8:0}
+                      style={{
+                        filter:`drop-shadow(0 0 ${isSel?9:3}px ${neon})`,
+                        transition:'r 0.25s,filter 0.25s',
+                      }}
+                    />
+                    {/* Cross-hairs when selected */}
+                    {isSel&&(
+                      <>
+                        <line x1={pos[0]-16} y1={pos[1]} x2={pos[0]-r*1.75-3} y2={pos[1]} stroke={neon} strokeWidth="0.7" opacity="0.5"/>
+                        <line x1={pos[0]+r*1.75+3} y1={pos[1]} x2={pos[0]+16} y2={pos[1]} stroke={neon} strokeWidth="0.7" opacity="0.5"/>
+                        <line x1={pos[0]} y1={pos[1]-16} x2={pos[0]} y2={pos[1]-r*1.75-3} stroke={neon} strokeWidth="0.7" opacity="0.5"/>
+                        <line x1={pos[0]} y1={pos[1]+r*1.75+3} x2={pos[0]} y2={pos[1]+16} stroke={neon} strokeWidth="0.7" opacity="0.5"/>
+                      </>
+                    )}
+                    {/* Symbol */}
+                    <text x={pos[0]} y={pos[1]+0.5} textAnchor="middle" dominantBaseline="middle"
+                      fontSize={isSel?11:7} style={{userSelect:'none',pointerEvents:'none',
+                      filter:`drop-shadow(0 0 2px ${neon})`}}>
+                      {planet.symbol}
+                    </text>
+                    {/* Name label */}
+                    <text x={pos[0]} y={pos[1]+(isSel?r*1.75:r)+11}
+                      textAnchor="middle" fontSize={isSel?9.5:7}
+                      fill={isSel?neon:'rgba(255,255,255,0.35)'}
+                      fontFamily="monospace" fontWeight={isSel?700:400}
+                      style={{userSelect:'none',pointerEvents:'none',
+                        filter:isSel?`drop-shadow(0 0 4px ${neon})`:'none',
+                        transition:'font-size 0.2s,fill 0.2s'}}>
+                      {planet.name}
+                    </text>
+                  </g>
+                );
+              })}
+            </svg>
+
+            {/* Info card */}
+            <AnimatePresence>
+              {sel&&(
+                <motion.div key={sel.name}
+                  initial={{opacity:0,y:8,scale:0.93}} animate={{opacity:1,y:0,scale:1}}
+                  exit={{opacity:0,y:5,scale:0.96}} transition={{duration:0.22}}
+                  style={{
+                    position:'absolute',bottom:-90,left:'50%',transform:'translateX(-50%)',
+                    width:260,background:'rgba(0,0,0,0.8)',backdropFilter:'blur(18px)',
+                    border:`1px solid ${selNeon}50`,borderRadius:12,padding:'10px 16px',
+                    pointerEvents:'none',boxShadow:`0 0 22px ${selNeon}20`,
+                  }}
+                >
+                  {[0,1,2,3].map(i=>(
+                    <div key={i} style={{
+                      position:'absolute',width:4,height:4,
+                      borderTop:i<2?`1px solid ${selNeon}`:'none',borderBottom:i>=2?`1px solid ${selNeon}`:'none',
+                      borderLeft:i%2===0?`1px solid ${selNeon}`:'none',borderRight:i%2===1?`1px solid ${selNeon}`:'none',
+                      top:i<2?5:'auto',bottom:i>=2?5:'auto',left:i%2===0?5:'auto',right:i%2===1?5:'auto',
+                    }}/>
+                  ))}
+                  <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:4}}>
+                    <span style={{fontSize:15}}>{sel.symbol}</span>
+                    <span style={{fontFamily:'monospace',fontSize:11,fontWeight:700,letterSpacing:2,color:selNeon,textShadow:`0 0 8px ${selNeon}`}}>
+                      {sel.name}
+                    </span>
+                    <div style={{marginLeft:'auto',width:5,height:5,borderRadius:'50%',background:selNeon,boxShadow:`0 0 6px ${selNeon}`}}/>
+                  </div>
+                  <div style={{fontFamily:'monospace',fontSize:9,color:'rgba(255,255,255,0.55)',letterSpacing:0.5}}>
+                    {sel.description}
+                  </div>
+                  <div style={{marginTop:5,fontFamily:'monospace',fontSize:7,color:`${selNeon}70`,letterSpacing:1,textTransform:'uppercase'}}>
+                    {['Core Stack','Infrastructure','Specialized'][sel.shell||0]} · Shell {(sel.shell||0)+1}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </motion.div>
+
+          {/* Shell legend */}
+          <motion.div initial={{opacity:0,y:10}} animate={{opacity:1,y:0}}
+            transition={{delay:0.9,duration:0.5}}
+            style={{display:'flex',gap:14,marginTop:sel?104:20,
+              pointerEvents:'none',transition:'margin-top 0.3s ease'}}
+          >
+            {['Core','Infra','Special'].map((label,i)=>(
+              <div key={i} style={{display:'flex',alignItems:'center',gap:4}}>
+                <div style={{width:5,height:5,borderRadius:'50%',
+                  background:shellNeonColors[i],boxShadow:`0 0 5px ${shellNeonColors[i]}`}}/>
+                <span style={{fontFamily:'monospace',fontSize:8,color:'rgba(255,255,255,0.3)',letterSpacing:1,textTransform:'uppercase'}}>
+                  {label}
+                </span>
+              </div>
+            ))}
+          </motion.div>
         </motion.div>
       )}
     </AnimatePresence>
   );
 };
 
-// ─── ATMOSPHERE ───────────────────────────────────────────────────────────────
+// ─── ATMOSPHERE ────────────────────────────────────────────────────────────────
+// Orbit rendering is fully canvas-based — NO setAngle React state per frame.
+// This eliminates the jank entirely.
 export const Atmosphere = ({ onPhysicsUpdate }: AtmosphereProps) => {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const skyDivRef = useRef<HTMLDivElement>(null);
-  const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
-  const [globalHoveredPlanet, setGlobalHoveredPlanet] = useState<string | null>(null);
-  const [revealAll] = useState(false);
+  const skyDivRef      = useRef<HTMLDivElement>(null);
+  const bgCanvasRef    = useRef<HTMLCanvasElement>(null);
+  const orbitCanvasRef = useRef<HTMLCanvasElement>(null);
+
+  const [dimensions,   setDimensions]       = useState({ width: 0, height: 0 });
   const [planetsVisible, setPlanetsVisibleState] = useState(false);
-  const [planetsActive, setPlanetsActive] = useState(false);
-  const [isMobile, setIsMobile] = useState(false);
+  const [planetsActive,  setPlanetsActive]   = useState(false);
+  const [isMobile,     setIsMobile]          = useState(false);
+  const [altitudeState,setAltitudeState]     = useState(90);
 
-  const targetAltRef = useRef(90);
+  // Hover/lock in refs — never cause re-renders inside animation loop
+  const hoveredIdxRef = useRef(-1);
+  const lockedIdxRef  = useRef(-1);
+  const [hoveredIdx, setHoveredIdx] = useState(-1);
+  const [lockedIdx,  setLockedIdx]  = useState(-1);
+
+  // Orbit angles — Float64Array, never React state
+  const anglesRef = useRef<Float64Array>(
+    new Float64Array(techPlanets.map(p=>(p.initialAngle||0)*Math.PI/180))
+  );
+
+  // Entry state per planet: 0=hidden,1=entering,2=orbiting,3=exiting
+  const entryStateRef    = useRef<Int8Array>(new Int8Array(techPlanets.length).fill(0));
+  const entryProgressRef = useRef<Float32Array>(new Float32Array(techPlanets.length).fill(0));
+  const entryOriginsRef  = useRef<{x:number,y:number}[]>([]);
+  const exitTargetsRef   = useRef<{x:number,y:number}[]>([]);
+
+  // Current screen positions for hit-testing
+  const positionsRef = useRef<{x:number,y:number,size:number}[]>(
+    techPlanets.map(()=>({x:-9999,y:-9999,size:24}))
+  );
+
+  const targetAltRef  = useRef(90);
   const currentAltRef = useRef(90);
-  const [altitudeState, setAltitudeState] = useState(90);
-  const rafIdRef = useRef(0);
+  const activeRef     = useRef(false);
+  const rafAltRef     = useRef(0);
 
-  useEffect(() => {
-    const check = () => setIsMobile(window.innerWidth < 768);
-    check(); window.addEventListener('resize', check);
-    return () => window.removeEventListener('resize', check);
-  }, []);
+  // Mutable refs that the orbit loop reads without closures
+  const sunXRef    = useRef(0);
+  const sunYRef    = useRef(0);
+  const dimRef     = useRef(dimensions);
+  const physicsRef = useRef<any>(null);
 
-  // Scroll → altitude with smooth interpolation
-  useEffect(() => {
-    const onScroll = () => {
-      const maxScroll = document.documentElement.scrollHeight - window.innerHeight;
-      const progress = maxScroll > 0 ? Math.min(1, Math.max(0, window.scrollY / maxScroll)) : 0;
-      targetAltRef.current = progressToAltitude(progress);
+  useEffect(()=>{dimRef.current=dimensions;},[dimensions]);
+
+  // ── Mobile ──
+  useEffect(()=>{
+    const check=()=>setIsMobile(window.innerWidth<768);
+    check(); window.addEventListener('resize',check);
+    return ()=>window.removeEventListener('resize',check);
+  },[]);
+
+  // ── Resize ──
+  useEffect(()=>{
+    const upd=()=>setDimensions({width:window.innerWidth,height:window.innerHeight});
+    upd(); window.addEventListener('resize',upd);
+    return ()=>window.removeEventListener('resize',upd);
+  },[]);
+
+  // ── Visibility ──
+  useEffect(()=>{
+    const u=subscribeToVisibility(setPlanetsVisibleState);
+    return ()=>{u?.();};
+  },[]);
+
+  // ── Scroll → altitude smooth loop (no React setState per frame) ──
+  useEffect(()=>{
+    const onScroll=()=>{
+      const max=document.documentElement.scrollHeight-window.innerHeight;
+      targetAltRef.current=progressToAltitude(max>0?Math.min(1,Math.max(0,window.scrollY/max)):0);
     };
-    window.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('scroll',onScroll,{passive:true});
     onScroll();
 
-    const ALPHA = 0.06;
-    const loop = () => {
-      const diff = targetAltRef.current - currentAltRef.current;
-      if (Math.abs(diff) > 0.03) {
-        currentAltRef.current += diff * ALPHA;
-        setAltitudeState(currentAltRef.current);
-        if (skyDivRef.current) {
-          const alt = Math.max(-25, Math.min(90, currentAltRef.current));
-          const { cs, rgb } = computeSkyColors(alt);
-          skyDivRef.current.style.background =
-            `linear-gradient(to bottom, ${rgb(cs.st)} 0%, ${rgb(cs.sb)} 52%, ${rgb(cs.hz)} 100%)`;
+    const loop=()=>{
+      const diff=targetAltRef.current-currentAltRef.current;
+      if(Math.abs(diff)>0.02){
+        currentAltRef.current+=diff*0.06;
+        const alt=Math.max(-25,Math.min(90,currentAltRef.current));
+        setAltitudeState(alt);
+        if(skyDivRef.current){
+          const {cs,rgb}=computeSkyColors(alt);
+          skyDivRef.current.style.background=
+            `linear-gradient(to bottom,${rgb(cs.st)} 0%,${rgb(cs.sb)} 52%,${rgb(cs.hz)} 100%)`;
         }
       }
-      rafIdRef.current = requestAnimationFrame(loop);
+      rafAltRef.current=requestAnimationFrame(loop);
     };
-    rafIdRef.current = requestAnimationFrame(loop);
-    return () => { window.removeEventListener('scroll', onScroll); cancelAnimationFrame(rafIdRef.current); };
-  }, []);
+    rafAltRef.current=requestAnimationFrame(loop);
+    return ()=>{window.removeEventListener('scroll',onScroll);cancelAnimationFrame(rafAltRef.current);};
+  },[]);
 
-  useEffect(() => {
-    const upd = () => setDimensions({ width: window.innerWidth, height: window.innerHeight });
-    upd(); window.addEventListener('resize', upd);
-    return () => window.removeEventListener('resize', upd);
-  }, []);
-
-  useEffect(() => {
-    const u = subscribeToVisibility(setPlanetsVisibleState);
-    return () => { u?.(); };
-  }, []);
-
-  useEffect(() => {
-    setPlanetsActive(altitudeState > -20 && dimensions.width > 0 && planetsVisible);
-  }, [altitudeState, dimensions.width, planetsVisible]);
-
-  const sunX = dimensions.width * 0.7;
-  const sunY = dimensions.height > 0
-    ? Math.max(50, Math.min(dimensions.height - 50,
-        dimensions.height * 0.1 + ((90 - altitudeState) / 110) * dimensions.height * 0.8))
+  // ── Sun position & active state ──
+  const sunX=dimensions.width*0.7;
+  const sunY=dimensions.height>0
+    ? Math.max(50,Math.min(dimensions.height-50,dimensions.height*0.1+((90-altitudeState)/110)*dimensions.height*0.8))
     : 0;
+  useEffect(()=>{sunXRef.current=sunX;sunYRef.current=sunY;},[sunX,sunY]);
 
-  const highlightedShell = globalHoveredPlanet
-    ? techPlanets.find(p => p.name === globalHoveredPlanet)?.shell ?? null
-    : null;
+  useEffect(()=>{
+    const active=altitudeState>-20&&dimensions.width>0&&planetsVisible;
+    setPlanetsActive(active);
+    activeRef.current=active;
+  },[altitudeState,dimensions.width,planetsVisible]);
 
-  const physics = useMemo(() => {
-    const alt = Math.max(-25, Math.min(90, altitudeState));
-    const safeAlt = Math.max(0.5, Math.abs(alt));
-    const rad = (safeAlt * Math.PI) / 180;
-    const pathLength = Math.min(1 / Math.sin(rad), 50);
-    const scatteringStrength = Math.min((pathLength - 1) * 1.5, 12);
-    const { cs, rgb } = computeSkyColors(alt);
-    const phaseKey = getPhaseLabel(alt);
-    const cur = SKY_STATES[phaseKey];
+  // ── Initialise entry/exit origins ──
+  useEffect(()=>{
+    if(!dimensions.width) return;
+    const {width:vw,height:vh}=dimensions;
+    entryOriginsRef.current=techPlanets.map((_,i)=>{
+      const angle=seededRandom(i*3.7)*Math.PI*2;
+      const dist=Math.max(vw,vh)*(1.2+seededRandom(i*1.3)*0.8);
+      return {x:vw*0.5+Math.cos(angle)*dist,y:vh*0.5+Math.sin(angle)*dist};
+    });
+    // Exit targets computed at exit time from current pos, just pre-fill defaults
+    exitTargetsRef.current=techPlanets.map((_,i)=>{
+      const seed=i*7.7+99;
+      const angle=seededRandom(seed)*Math.PI*2;
+      const dist=Math.max(vw,vh)*(1.4+seededRandom(seed+1)*0.4);
+      return {x:vw*0.5+Math.cos(angle)*dist,y:vh*0.5+Math.sin(angle)*dist};
+    });
+  },[dimensions]);
+
+  // ── Physics (React state, for external consumers) ──
+  const physics=useMemo(()=>{
+    const alt=Math.max(-25,Math.min(90,altitudeState));
+    const safeAlt=Math.max(0.5,Math.abs(alt));
+    const rad=(safeAlt*Math.PI)/180;
+    const pathLength=Math.min(1/Math.sin(rad),50);
+    const scatteringStrength=Math.min((pathLength-1)*1.5,12);
+    const {cs,rgb}=computeSkyColors(alt);
+    const phaseKey=getPhaseLabel(alt);
     return {
-      altitude: alt, pathLength, scatteringStrength,
-      skyTop: rgb(cs.st), skyBottom: rgb(cs.sb),
-      sunColor: rgb(cs.su), glowColor: rgb(cs.gl), horizonColor: rgb(cs.hz),
-      starsOpacity: Math.max(0, Math.min(1, cs.so)),
-      isNight: alt < -5, sunX, sunY, timeOfDay: phaseKey,
-      currentState: { phase: cur.phase, short: cur.short, full: cur.full },
-      blueSurvival: Math.max(0, Math.min(100, 100 - scatteringStrength * 8)),
+      altitude:alt,pathLength,scatteringStrength,
+      skyTop:rgb(cs.st),skyBottom:rgb(cs.sb),
+      sunColor:rgb(cs.su),glowColor:rgb(cs.gl),horizonColor:rgb(cs.hz),
+      starsOpacity:Math.max(0,Math.min(1,cs.so)),
+      isNight:alt<-5,sunX,sunY,timeOfDay:phaseKey,
+      currentState:{phase:SKY_STATES[phaseKey].phase},
+      blueSurvival:Math.max(0,Math.min(100,100-scatteringStrength*8)),
     };
-  }, [altitudeState, sunX, sunY]);
+  },[altitudeState,sunX,sunY]);
 
-  useEffect(() => {
-    if (physics) {
-      onPhysicsUpdate?.(physics);
-      window.dispatchEvent(new CustomEvent('atmosphere-physics-update', { detail: physics }));
-    }
-  }, [physics, onPhysicsUpdate]);
+  useEffect(()=>{
+    physicsRef.current=physics;
+    onPhysicsUpdate?.(physics);
+    window.dispatchEvent(new CustomEvent('atmosphere-physics-update',{detail:physics}));
+  },[physics,onPhysicsUpdate]);
 
-  const [particles] = useState(() =>
-    Array.from({ length: 80 }, (_, i) => ({
-      id: i, x: 20 + Math.random() * 60, y: 10 + Math.random() * 70,
-      size: 1.5 + Math.random() * 2.5, speed: 0.3 + Math.random() * 0.7,
-      phase: Math.random() * Math.PI * 2,
+  // ── Background canvas: sky fx, stars, sun ──
+  const [particles]=useState(()=>
+    Array.from({length:55},(_,i)=>({
+      x:20+Math.random()*60,y:10+Math.random()*70,
+      size:1+Math.random()*2,speed:0.3+Math.random()*0.5,phase:Math.random()*Math.PI*2,
     }))
   );
 
-  // Canvas: stars + sun glow + beam + particles
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-    const resize = () => { canvas.width = window.innerWidth; canvas.height = window.innerHeight; };
+  useEffect(()=>{
+    const canvas=bgCanvasRef.current;
+    if(!canvas) return;
+    const ctx=canvas.getContext('2d');
+    if(!ctx) return;
+    const resize=()=>{canvas.width=window.innerWidth;canvas.height=window.innerHeight;};
     resize();
-    window.addEventListener('resize', resize);
-    let animId: number, time = 0;
+    window.addEventListener('resize',resize);
+    let animId:number,time=0;
 
-    const draw = () => {
-      const { width, height } = canvas;
-      const p = physics;
-      if (!width || !height) { animId = requestAnimationFrame(draw); return; }
-      ctx.clearRect(0, 0, width, height);
-      time += 0.016;
+    const draw=()=>{
+      const {width,height}=canvas;
+      const p=physicsRef.current||physics;
+      if(!width||!height){animId=requestAnimationFrame(draw);return;}
+      ctx.clearRect(0,0,width,height);
+      time+=0.016;
 
-      // Stars
-      if (p.starsOpacity > 0) {
-        for (let i = 0; i < 60; i++) {
-          const sx = ((i * 137.5) % width + width) % width;
-          const sy = ((i * 71.3) % (height * 0.7) + height * 0.7) % (height * 0.7);
-          const tw = Math.sin(time + i) * 0.5 + 0.5;
-          ctx.beginPath(); ctx.arc(sx, sy, 1 + tw * 1.5, 0, Math.PI * 2);
-          ctx.fillStyle = `rgba(255,255,255,${p.starsOpacity * 0.85 * tw})`; ctx.fill();
+      if(p.starsOpacity>0){
+        for(let i=0;i<60;i++){
+          const sx=((i*137.5)%width+width)%width;
+          const sy=((i*71.3)%(height*0.7)+height*0.7)%(height*0.7);
+          const tw=Math.sin(time+i)*0.5+0.5;
+          ctx.beginPath();ctx.arc(sx,sy,1+tw*1.5,0,Math.PI*2);
+          ctx.fillStyle=`rgba(255,255,255,${p.starsOpacity*0.85*tw})`;ctx.fill();
         }
       }
 
-      // Sun beam crepuscular rays
-      const ox = width * 0.5, oy = height * 0.95;
-      const bw = Math.min(40 + p.scatteringStrength * 5, 160);
-      const bg = ctx.createLinearGradient(sunX, sunY, ox, oy);
-      bg.addColorStop(0, p.sunColor.replace(')', `,${p.isNight ? 0.15 : 0.35})`));
-      bg.addColorStop(0.5, p.glowColor.replace(')', `,${Math.max(0, 0.25 - p.scatteringStrength * 0.01)})`));
-      bg.addColorStop(1, 'transparent');
-      ctx.beginPath();
-      ctx.moveTo(sunX - bw/2, sunY); ctx.lineTo(sunX + bw/2, sunY);
-      ctx.lineTo(ox + bw, oy); ctx.lineTo(ox - bw, oy); ctx.closePath();
-      ctx.fillStyle = bg; ctx.fill();
+      const sx=sunXRef.current,sy=sunYRef.current;
+      const ox=width*0.5,oy=height*0.95;
+      const bw=Math.min(40+p.scatteringStrength*5,160);
+      const bg=ctx.createLinearGradient(sx,sy,ox,oy);
+      bg.addColorStop(0,p.sunColor.replace(')',`,${p.isNight?0.1:0.28})`));
+      bg.addColorStop(0.5,p.glowColor.replace(')',`,${Math.max(0,0.18-p.scatteringStrength*0.01)})`));
+      bg.addColorStop(1,'transparent');
+      ctx.beginPath();ctx.moveTo(sx-bw/2,sy);ctx.lineTo(sx+bw/2,sy);
+      ctx.lineTo(ox+bw,oy);ctx.lineTo(ox-bw,oy);ctx.closePath();
+      ctx.fillStyle=bg;ctx.fill();
 
-      // Atmospheric particles
-      particles.forEach(pt => {
-        const px2 = ((pt.x / 100) * width + width) % width;
-        const py2 = ((pt.y / 100) * height + height) % height;
-        const ph = (time * pt.speed + pt.phase) % (Math.PI * 2);
-        ctx.beginPath(); ctx.arc(px2, py2, pt.size, 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(100,200,255,${0.07 + Math.sin(ph) * 0.07})`; ctx.fill();
+      particles.forEach(pt=>{
+        const px2=((pt.x/100)*width+width)%width;
+        const py2=((pt.y/100)*height+height)%height;
+        const ph=(time*pt.speed+pt.phase)%(Math.PI*2);
+        ctx.beginPath();ctx.arc(px2,py2,pt.size,0,Math.PI*2);
+        ctx.fillStyle=`rgba(100,200,255,${0.05+Math.sin(ph)*0.04})`;ctx.fill();
       });
 
-      // Sun disc + glow
-      const sr = Math.min(30 + p.scatteringStrength * 2, 85);
-      const pulse = Math.sin(time * 1.8) * 0.08 + 0.92;
-      const sg = ctx.createRadialGradient(sunX, sunY, 0, sunX, sunY, sr * 2.5);
-      sg.addColorStop(0, p.sunColor);
-      sg.addColorStop(0.25, p.sunColor.replace(')', ',0.7)'));
-      sg.addColorStop(0.6, p.glowColor.replace(')', ',0.3)'));
-      sg.addColorStop(1, 'transparent');
-      ctx.beginPath(); ctx.arc(sunX, sunY, sr * 2.5 * pulse, 0, Math.PI * 2);
-      ctx.fillStyle = sg; ctx.fill();
-      // Hard disc
-      ctx.beginPath(); ctx.arc(sunX, sunY, 14, 0, Math.PI * 2);
-      ctx.fillStyle = p.sunColor; ctx.fill();
+      const sr=Math.min(30+p.scatteringStrength*2,80);
+      const pulse=Math.sin(time*1.8)*0.07+0.93;
+      const sg=ctx.createRadialGradient(sx,sy,0,sx,sy,sr*2.5);
+      sg.addColorStop(0,p.sunColor);
+      sg.addColorStop(0.25,p.sunColor.replace(')',',0.7)'));
+      sg.addColorStop(0.6,p.glowColor.replace(')',',0.25)'));
+      sg.addColorStop(1,'transparent');
+      ctx.beginPath();ctx.arc(sx,sy,sr*2.5*pulse,0,Math.PI*2);ctx.fillStyle=sg;ctx.fill();
+      ctx.beginPath();ctx.arc(sx,sy,13,0,Math.PI*2);ctx.fillStyle=p.sunColor;ctx.fill();
 
-      animId = requestAnimationFrame(draw);
+      animId=requestAnimationFrame(draw);
     };
     draw();
-    return () => { window.removeEventListener('resize', resize); cancelAnimationFrame(animId); };
-  }, [particles, physics, sunX, sunY]);
+    return ()=>{window.removeEventListener('resize',resize);cancelAnimationFrame(animId);};
+  },[particles]); // physicsRef is a ref — updates happen without re-running effect
 
-  const { cs: initCs, rgb: initRgb } = computeSkyColors(90);
+  // ── Orbit canvas — THE MAIN FIX: pure canvas, no React state per frame ──
+  useEffect(()=>{
+    if(isMobile) return;
+    const canvas=orbitCanvasRef.current;
+    if(!canvas) return;
+    const ctx=canvas.getContext('2d',{alpha:true});
+    if(!ctx) return;
+    const resize=()=>{canvas.width=window.innerWidth;canvas.height=window.innerHeight;};
+    resize();
+    window.addEventListener('resize',resize);
+
+    let animId:number;
+    let last=performance.now();
+    let wasActive=false;
+    const staggerTimers:ReturnType<typeof setTimeout>[]=[];
+
+    const ENTRY_SPEED=0.65;
+    const EXIT_SPEED=1.3;
+
+    const startEntry=(idx:number)=>{
+      if(entryStateRef.current[idx]!==0) return;
+      const jitter=seededRandom(idx*4.2)*300;
+      const delay=idx*100+jitter+250;
+      staggerTimers.push(setTimeout(()=>{
+        entryStateRef.current[idx]=1;
+        entryProgressRef.current[idx]=0;
+      },delay));
+    };
+
+    const startExit=(idx:number)=>{
+      if(entryStateRef.current[idx]===0) return;
+      entryStateRef.current[idx]=3;
+      const pos=positionsRef.current[idx];
+      const seed=idx*7.7+99;
+      const angle=seededRandom(seed)*Math.PI*2;
+      const {width:vw,height:vh}=dimRef.current;
+      const dist=Math.max(vw,vh)*(1.4+seededRandom(seed+1)*0.4);
+      exitTargetsRef.current[idx]={x:pos.x+Math.cos(angle)*dist,y:pos.y+Math.sin(angle)*dist};
+    };
+
+    const draw=(now:number)=>{
+      // Cap delta to prevent huge jumps on tab switch
+      const delta=Math.min((now-last)/1000,0.05);
+      last=now;
+
+      const {width,height}=canvas;
+      if(!width||!height){animId=requestAnimationFrame(draw);return;}
+
+      const isActive=activeRef.current;
+      const sx=sunXRef.current,sy=sunYRef.current;
+      const hov=hoveredIdxRef.current,lock=lockedIdxRef.current;
+
+      // Transitions
+      if(isActive&&!wasActive){
+        entryStateRef.current.fill(0);
+        entryProgressRef.current.fill(0);
+        techPlanets.forEach((_,i)=>startEntry(i));
+      }
+      if(!isActive&&wasActive){
+        staggerTimers.forEach(t=>clearTimeout(t));
+        techPlanets.forEach((_,i)=>startExit(i));
+      }
+      wasActive=isActive;
+
+      ctx.clearRect(0,0,width,height);
+
+      // Orbital rings
+      if(isActive){
+        planetShells.forEach((shell,si)=>{
+          const px=width*shell.radius;
+          const neon=shellNeonColors[si];
+          const highlight=(hov>=0&&techPlanets[hov]?.shell===si)||(lock>=0&&techPlanets[lock]?.shell===si);
+          ctx.beginPath();
+          ctx.ellipse(sx,sy,px,px*0.5,0,0,Math.PI*2);
+          ctx.strokeStyle=highlight?`${neon}65`:`${neon}18`;
+          ctx.lineWidth=highlight?1.2:0.6;
+          ctx.stroke();
+        });
+      }
+
+      // Planets
+      techPlanets.forEach((planet,i)=>{
+        const shell=planetShells[planet.shell||0];
+        const neon=shellNeonColors[planet.shell||0];
+        const state=entryStateRef.current[i];
+        let prog=entryProgressRef.current[i];
+
+        if(state===0) return;
+
+        // Advance orbit angle regardless of entry/exit state (keeps continuity)
+        const slow=(hov>=0&&hov!==i)||(lock>=0&&lock!==i&&state===2);
+        anglesRef.current[i]+=(slow?shell.speed*0.04:shell.speed)*delta;
+
+        const angle=anglesRef.current[i];
+        const pixR=width*shell.radius;
+        const orbitX=sx+Math.cos(angle)*pixR;
+        const orbitY=sy+Math.sin(angle)*pixR*0.5;
+
+        let drawX=orbitX,drawY=orbitY,alpha=1,scl=1;
+
+        if(state===1){
+          // Entering
+          prog=Math.min(1,prog+ENTRY_SPEED*delta);
+          entryProgressRef.current[i]=prog;
+          const t=Math.max(0,Math.min(1,easeOutBack(prog)));
+          const origin=entryOriginsRef.current[i]||{x:orbitX,y:orbitY};
+          drawX=origin.x+(orbitX-origin.x)*t;
+          drawY=origin.y+(orbitY-origin.y)*t;
+          alpha=Math.min(1,prog*2.5);
+          scl=0.15+t*0.85;
+          if(prog>=1) entryStateRef.current[i]=2;
+        } else if(state===3){
+          // Exiting
+          prog=Math.min(1,prog+EXIT_SPEED*delta);
+          entryProgressRef.current[i]=prog;
+          const t=easeInCubic(prog);
+          const target=exitTargetsRef.current[i]||{x:orbitX,y:orbitY};
+          drawX=orbitX+(target.x-orbitX)*t;
+          drawY=orbitY+(target.y-orbitY)*t;
+          alpha=1-prog;
+          scl=1-prog*0.9;
+          if(prog>=1) entryStateRef.current[i]=0;
+        }
+
+        const size=planet.size||24;
+        positionsRef.current[i]={x:drawX,y:drawY,size};
+
+        const inFront=Math.sin(angle)>0;
+        const isActive2=(i===hov||i===lock);
+        const depthScale=isActive2?1.75:(inFront?1.1:0.72);
+        const dimmed=(hov>=0&&!isActive2)||(lock>=0&&!isActive2&&state===2);
+        const bright=inFront?1:0.5;
+
+        ctx.save();
+        ctx.translate(drawX,drawY);
+        ctx.scale(scl,scl);
+        ctx.globalAlpha=alpha*(dimmed?0.15:1)*bright;
+
+        // Glow halo
+        const grd=ctx.createRadialGradient(0,0,0,0,0,size*1.8);
+        grd.addColorStop(0,`${neon}28`);grd.addColorStop(1,'transparent');
+        ctx.beginPath();ctx.arc(0,0,size*1.8,0,Math.PI*2);ctx.fillStyle=grd;ctx.fill();
+
+        // Orbit ring around planet
+        ctx.beginPath();ctx.arc(0,0,size/2+2.5,0,Math.PI*2);
+        ctx.strokeStyle=neon;
+        ctx.lineWidth=isActive2?1.8:0.8;
+        ctx.shadowColor=neon;ctx.shadowBlur=isActive2?14:4;
+        ctx.stroke();ctx.shadowBlur=0;
+
+        // Planet sphere
+        const sphere=ctx.createRadialGradient(-size*0.12,-size*0.12,0,0,0,size/2);
+        sphere.addColorStop(0,planet.color+'ff');
+        sphere.addColorStop(0.55,planet.color+'bb');
+        sphere.addColorStop(1,planet.color+'25');
+        ctx.beginPath();ctx.arc(0,0,size/2,0,Math.PI*2);
+        ctx.fillStyle=sphere;ctx.fill();
+
+        // Symbol
+        ctx.globalAlpha=alpha*(dimmed?0.15:1);
+        ctx.font=`${Math.round(size*0.42)}px serif`;
+        ctx.textAlign='center';ctx.textBaseline='middle';
+        ctx.shadowColor=neon;ctx.shadowBlur=3;
+        ctx.fillText(planet.symbol,0,1);ctx.shadowBlur=0;
+
+        // Name label — always visible
+        const labelAlpha=dimmed?0.04:(isActive2?1.0:0.82);
+        ctx.globalAlpha=alpha*labelAlpha;
+        ctx.font=`bold ${Math.max(7,Math.round(size*0.3))}px monospace`;
+        ctx.textAlign='center';ctx.textBaseline='top';
+        ctx.shadowColor='rgba(0,0,0,0.95)';ctx.shadowBlur=7;
+        ctx.fillStyle=isActive2?neon:'rgba(255,255,255,0.92)';
+        if(isActive2){ctx.shadowColor=neon;ctx.shadowBlur=10;}
+        ctx.fillText(planet.name,0,size/2+5);
+        ctx.shadowBlur=0;
+
+        ctx.restore();
+      });
+
+      animId=requestAnimationFrame(draw);
+    };
+
+    animId=requestAnimationFrame(draw);
+    return ()=>{
+      window.removeEventListener('resize',resize);
+      cancelAnimationFrame(animId);
+      staggerTimers.forEach(t=>clearTimeout(t));
+    };
+  },[isMobile]); // intentionally stable — reads everything via refs
+
+  // ── Hit testing ──
+  const handleMouseMove=useCallback((e:React.MouseEvent)=>{
+    const canvas=orbitCanvasRef.current;
+    if(!canvas) return;
+    const rect=canvas.getBoundingClientRect();
+    const mx=e.clientX-rect.left,my=e.clientY-rect.top;
+    let found=-1;
+    for(let i=0;i<positionsRef.current.length;i++){
+      const {x,y,size}=positionsRef.current[i];
+      const dx=mx-x,dy=my-y;
+      if(dx*dx+dy*dy<(size*1.3)*(size*1.3)){found=i;break;}
+    }
+    if(found!==hoveredIdxRef.current){
+      hoveredIdxRef.current=found;
+      setHoveredIdx(found);
+    }
+  },[]);
+
+  const handleClick=useCallback(()=>{
+    const found=hoveredIdxRef.current;
+    if(found<0){lockedIdxRef.current=-1;setLockedIdx(-1);return;}
+    if(lockedIdxRef.current===found){lockedIdxRef.current=-1;setLockedIdx(-1);}
+    else{lockedIdxRef.current=found;setLockedIdx(found);}
+  },[]);
+
+  const handleLeave=useCallback(()=>{
+    hoveredIdxRef.current=-1;setHoveredIdx(-1);
+  },[]);
+
+  const {cs:initCs,rgb:initRgb}=computeSkyColors(90);
+
+  // Tooltip
+  const tooltipIdx   = hoveredIdx>=0?hoveredIdx:lockedIdx;
+  const tooltipPlanet= tooltipIdx>=0?techPlanets[tooltipIdx]:null;
+  const tooltipPos   = tooltipPlanet?positionsRef.current[tooltipIdx]:null;
 
   return (
-    <div style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 0 }}>
-      {/* Sky gradient — updated directly via JS for smooth perf */}
-      <div
-        ref={skyDivRef}
-        style={{
-          position: 'absolute', inset: 0,
-          background: `linear-gradient(to bottom, ${initRgb(initCs.st)} 0%, ${initRgb(initCs.sb)} 52%, ${initRgb(initCs.hz)} 100%)`,
-        }}
-      />
+    <div style={{position:'fixed',inset:0,pointerEvents:'none',zIndex:0}}>
+      {/* Sky gradient */}
+      <div ref={skyDivRef} style={{
+        position:'absolute',inset:0,
+        background:`linear-gradient(to bottom,${initRgb(initCs.st)} 0%,${initRgb(initCs.sb)} 52%,${initRgb(initCs.hz)} 100%)`,
+      }}/>
 
-      {/* Canvas: stars, beam, particles, sun */}
-      <canvas ref={canvasRef} style={{ position: 'absolute', inset: 0 }} />
+      {/* Background FX canvas */}
+      <canvas ref={bgCanvasRef} style={{position:'absolute',inset:0}}/>
 
-      {/* Orbital rings — desktop only */}
-      {!isMobile && planetShells.map((shell, i) => (
-        <OrbitalRing key={i} sunX={sunX} sunY={sunY}
-          radius={shell.radius} color={shellNeonColors[i]}
-          isActive={planetsActive} viewportWidth={dimensions.width}
-          isHighlighted={highlightedShell === i}
+      {/* Orbit canvas (desktop) */}
+      {!isMobile&&(
+        <canvas ref={orbitCanvasRef}
+          style={{
+            position:'absolute',inset:0,
+            pointerEvents:planetsActive?'auto':'none',
+            cursor:hoveredIdx>=0?'pointer':'default',
+          }}
+          onMouseMove={handleMouseMove}
+          onClick={handleClick}
+          onMouseLeave={handleLeave}
         />
-      ))}
+      )}
 
-      {/* Orbiting planets with labels — desktop only */}
-      {!isMobile && dimensions.width > 0 && techPlanets.map((planet, i) => (
-        <TechPlanet key={planet.name} planet={planet} planetIndex={i}
-          sunX={sunX} sunY={sunY}
-          viewportWidth={dimensions.width} viewportHeight={dimensions.height}
-          altitude={altitudeState} isActive={planetsActive}
-          globalHoveredPlanet={globalHoveredPlanet}
-          setGlobalHoveredPlanet={setGlobalHoveredPlanet}
-          revealAll={revealAll}
-        />
-      ))}
+      {/* Tooltip */}
+      {!isMobile&&tooltipPlanet&&tooltipPos&&(
+        <AnimatePresence>
+          <PlanetTooltip key={tooltipPlanet.name} planet={tooltipPlanet}
+            x={tooltipPos.x}
+            y={tooltipPos.y+(tooltipPlanet.size||24)/2+26}
+            isLocked={lockedIdx===tooltipIdx}
+          />
+        </AnimatePresence>
+      )}
 
-      {/* Mobile marquee */}
-      {isMobile && <MobileTechMarquee isVisible={planetsActive} />}
+      {/* Mobile constellation map */}
+      {isMobile&&<MobileConstellationMap isVisible={planetsActive}/>}
 
-      {/* Debug HUD */}
-      <div style={{
-        position: 'fixed', bottom: 16, left: 16,
-        fontFamily: 'monospace', fontSize: 10,
-        color: 'rgba(255,255,255,0.25)', pointerEvents: 'none', zIndex: 999,
-      }}>
-        {altitudeState.toFixed(1)}° {physics.pathLength.toFixed(1)}× {physics.timeOfDay}
+      {/* Debug */}
+      <div style={{position:'fixed',bottom:14,left:14,fontFamily:'monospace',fontSize:10,color:'rgba(255,255,255,0.18)',pointerEvents:'none',zIndex:999}}>
+        {altitudeState.toFixed(1)}° · {getPhaseLabel(altitudeState)}
       </div>
-
-      <style>{`
-        @keyframes atmo-spin     { from { transform: rotate(0deg); }   to { transform: rotate(360deg); } }
-        @keyframes atmo-spin-rev { from { transform: rotate(360deg); } to { transform: rotate(0deg); } }
-      `}</style>
     </div>
   );
 };
